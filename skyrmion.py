@@ -8,6 +8,40 @@ import bpy
 from math import *
 import numpy as np
 
+class Geometry(): pass
+
+# square lattice
+gsquare = Geometry() # get geometry
+gsquare.r = [np.array([0.,0.,0.])] # positions
+gsquare.a1 = np.array([1.,0.,0.]) # positions
+gsquare.a2 = np.array([0.,1.,0.]) # positions
+
+# triangular lattice
+gtri = Geometry() # get geometry
+gtri.r = [np.array([0.,0.,0.])] # positions
+gtri.a1 = np.array([1.,0.,0.]) # vector
+gtri.a2 = np.array([1./2.,np.sqrt(3.)/2.,0.]) # vector
+
+
+
+# honeycomb lattice
+ghoney = Geometry() # get geometry
+ghoney.r = [np.array([-0.5,0.,0.]),np.array([0.5,0.,0.])] # positions
+ghoney.a1 = np.array([3./2.,np.sqrt(3.)/2,0.]) # vector
+ghoney.a2 = np.array([-3./2.,np.sqrt(3.)/2,0.]) # vector
+
+
+
+def supercell(g,nx=1,ny=1):
+    """Compute a supercell"""
+    rs = [] # empty list
+    for ix in range(-nx,nx+1):
+      for iy in range(-ny,ny+1):
+        for r in g.r: rs.append(r + ix*g.a1 + iy*g.a2)
+    return np.array(rs) # return rs
+
+
+
 class Skyrmion(bpy.types.Operator):
     """Skyrmion generator"""
     bl_idname = "object.skyrmion"
@@ -22,6 +56,12 @@ class Skyrmion(bpy.types.Operator):
     space = bpy.props.FloatProperty(name="Spacing", default=4.0, min=0.0, max =20.0,step=50)
     is_circular = bpy.props.BoolProperty(name="Circular")
     elevation = bpy.props.FloatProperty(name="Elevation", default=0.0, min=-10.0, max =10.0,step=100)
+    test_items = [
+    ("square", "square", "", 1),
+    ("triangular", "triangular", "", 2),
+    ("honeycomb", "honeycomb", "", 3),
+    ]
+    enum = bpy.props.EnumProperty(items=test_items)
     def execute(self, context):
       # define here the positions where you want to copy the selected objects
       # in this example we choose a square lattice of size 4
@@ -35,10 +75,13 @@ class Skyrmion(bpy.types.Operator):
       for i in range(-ng,ng+1):
         for j in range(-ng,ng+1):
           if self.is_circular: # if desired circular skyrmion
-            if i*i+j*j>ng*ng: continue # if too large, nexti iteration
+            if i*i+j*j>ng*ng: continue # if too large, next iteration
           pos=pos+[[r*i,r *j,0]]
-      
-      
+      if self.enum=="square": g = gsquare # triangular lattice
+      elif self.enum=="triangular": g = gtri # triangular lattice
+      elif self.enum=="honeycomb": g = ghoney # triangular lattice
+      pos = supercell(g,nx=ng,ny=ng)
+      pos = pos*r # scale the positions
       # here put the direction of the object in each point, (0,0,1) corresponds
       # to no rotation, so the vector refers to the new direction
       # of a characteristic axis,  The vectors will be
